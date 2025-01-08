@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>リンク一覧</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f4f4f9;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      flex-direction: column;
+    }
+
+    .container {
+      width: 90%;
+      max-width: 1200px;
+      padding: 40px;
+      background-color: #fff;
+      border-radius: 8px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      overflow-y: auto;
+      height: 80vh;
+    }
+
+    h1 {
+      text-align: center;
+      color: #333;
+      font-size: 2.5rem;
+      margin-bottom: 20px;
+    }
+
+    #link-list {
+      margin-bottom: 20px;
+      overflow-y: auto;
+      max-height: 60vh;
+    }
+
+    .link-item {
+      display: flex;
+      flex-direction: row;
+      margin-bottom: 20px;
+      align-items: center;
+      justify-content: flex-start;
+    }
+
+    .link-item input[type="checkbox"] {
+      width: 20px;
+      margin-right: 10px;
+    }
+
+    .link-item .link-name-input {
+      width: 30%;
+      padding: 10px;
+      font-size: 1.2rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+
+    .link-item input[type="text"] {
+      width: 40%;
+      padding: 10px;
+      font-size: 1.2rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+
+    .link-item a {
+      font-size: 1.2rem;
+      color: #007bff;
+      text-decoration: none;
+      margin-top: 10px;
+      display: block;
+    }
+
+    .link-item a:hover {
+      text-decoration: underline;
+    }
+
+    #add-link-btn {
+      padding: 12px 25px;
+      background-color: #28a745;
+      color: white;
+      border: none;
+      cursor: pointer;
+      font-size: 1.5rem;
+      width: 8%;
+      border-radius: 4px;
+    }
+
+    #add-link-btn:hover {
+      background-color: #218838;
+    }
+
+    #delete-selected-btn {
+      padding: 12px 25px;
+      background-color: #dc3545;
+      color: white;
+      border: none;
+      cursor: pointer;
+      font-size: 1.5rem;
+      width: 8%;
+      border-radius: 4px;
+      margin-top: 20px;
+    }
+
+    #delete-selected-btn:hover {
+      background-color: #c82333;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>リンク一覧</h1>
+    <div id="link-list"></div>
+    <button id="add-link-btn">追加</button>
+    <button id="delete-selected-btn">削除</button>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      const linkList = document.getElementById('link-list');
+      const addLinkBtn = document.getElementById('add-link-btn');
+      const deleteSelectedBtn = document.getElementById('delete-selected-btn');
+      let idCounter = 0;
+
+      // ローカルストレージからリンク一覧を読み込む
+      function loadLinks() {
+        const savedLinks = JSON.parse(localStorage.getItem('links')) || [];
+        savedLinks.forEach(link => {
+          createLinkItem(link.url, link.name, link.isHyperlink);
+        });
+      }
+
+      // リンクをローカルストレージに保存
+      function saveLinks() {
+        const links = [];
+        const linkItems = document.querySelectorAll('.link-item');
+        linkItems.forEach(linkItem => {
+          const urlInput = linkItem.querySelector('input[type="text"]');
+          const nameInput = linkItem.querySelector('.link-name-input');
+          const linkElement = linkItem.querySelector('a');
+
+          if (urlInput.value && nameInput.value) {
+            links.push({
+              url: linkElement ? linkElement.href : urlInput.value, 
+              name: nameInput.value,
+              isHyperlink: linkElement ? true : false // ハイパーリンクかどうかの情報も保存
+            });
+          }
+        });
+        localStorage.setItem('links', JSON.stringify(links));
+      }
+
+      // 新しいリンク入力ボックスを作成
+      function createLinkItem(url = '', name = '', isHyperlink = false) {
+        const linkItem = document.createElement('div');
+        linkItem.classList.add('link-item');
+        
+        const inputId = 'link-input-' + idCounter++;
+
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.classList.add('link-checkbox');
+        
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.id = inputId;
+        input.value = url; 
+
+        const nameInput = document.createElement('input');
+        nameInput.type = 'text';
+        nameInput.classList.add('link-name-input');
+        nameInput.value = name;
+
+        // リンクがすでにハイパーリンクならその状態を維持
+        if (isHyperlink && url) {
+          const linkElement = document.createElement('a');
+          linkElement.href = url;
+          linkElement.target = '_blank';
+          linkElement.textContent = url;
+          
+          linkItem.appendChild(checkbox);
+          linkItem.appendChild(nameInput);
+          linkItem.appendChild(linkElement); // リンクがあれば、リンクを表示
+        } else {
+          linkItem.appendChild(checkbox);
+          linkItem.appendChild(nameInput); 
+          linkItem.appendChild(input); // 普通の入力フィールド
+        }
+
+        linkList.appendChild(linkItem);
+
+        // URLが入力されたときにリンクに変換
+        input.addEventListener('input', function () {
+          const newUrl = input.value;
+          if (newUrl && isValidURL(newUrl)) {
+            const linkElement = document.createElement('a');
+            linkElement.href = newUrl;
+            linkElement.target = '_blank';
+            linkElement.textContent = newUrl;
+
+            // 入力フィールドをリンクに置き換え
+            input.replaceWith(linkElement);
+            linkItem.appendChild(linkElement);
+
+            saveLinks();
+          }
+        });
+      }
+
+      // 正しいURL形式かどうかをチェックする関数
+      function isValidURL(url) {
+        const regex = /^(https?:\/\/[^\s]+)$/;
+        return regex.test(url);
+      }
+
+      // 「追加」ボタンのクリックイベント
+      addLinkBtn.addEventListener('click', function() {
+        createLinkItem('', '', false);
+        saveLinks(); 
+      });
+
+      // 「削除」ボタンのクリックイベント
+      deleteSelectedBtn.addEventListener('click', function() {
+        const selectedCheckboxes = document.querySelectorAll('.link-item input[type="checkbox"]:checked');
+        
+        if (selectedCheckboxes.length > 0) {
+          const confirmation = confirm("削除してよろしいですか?");
+          
+          if (confirmation) {
+            selectedCheckboxes.forEach(checkbox => {
+              const linkItem = checkbox.closest('.link-item');
+              linkItem.remove(); 
+            });
+            saveLinks(); 
+          }
+        } else {
+          alert("削除するリンクを選択してください。");
+        }
+      });
+
+      // 最初にローカルストレージからリンクを読み込んで表示
+      loadLinks();
+    });
+  </script>
+</body>
+</html>
